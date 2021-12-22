@@ -39,6 +39,13 @@ from .yolact import YOLACT
 from .yolo import YOLOV3
 from .yolof import YOLOF
 from .yolox import YOLOX
+from .distill_frs_single import Distilling_FRS_Single
+from .distill_frs_two import Distilling_FRS_Two
+from .distill_single_nomask import Distilling_Single_noMask
+from .distill_single_01mask import Distilling_Single_01Mask
+from .distill_single_iou_aware import Distilling_Single_IoU
+from .distill_single_frs_diff import Distilling_Single_FRS_Diff
+
 
 __all__ = [
     'ATSS', 'BaseDetector', 'SingleStageDetector', 'TwoStageDetector', 'RPN',
@@ -48,5 +55,8 @@ __all__ = [
     'NASFCOS', 'PointRend', 'GFL', 'CornerNet', 'PAA', 'YOLOV3', 'YOLACT',
     'VFNet', 'DETR', 'TridentFasterRCNN', 'SparseRCNN', 'SCNet', 'SOLO',
     'DeformableDETR', 'AutoAssign', 'YOLOF', 'CenterNet', 'YOLOX',
-    'TwoStagePanopticSegmentor', 'PanopticFPN', 'QueryInst', 'LAD'
+    'TwoStagePanopticSegmentor', 'PanopticFPN', 'QueryInst', 'LAD',
+    'Distilling_FRS_Single', 'Distilling_FRS_Two', 
+    'Distilling_Single_noMask', 'Distilling_Single_01Mask', 'Distilling_Single_IoU',
+    'Distilling_Single_FRS_Diff', 
 ]

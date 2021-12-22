@@ -3,4 +3,5 @@ model = dict(
     backbone=dict(
         depth=101,
         init_cfg=dict(type='Pretrained',
-                      checkpoint='torchvision://resnet101')))
+                      checkpoint='./model/retinanet_r101_fpn_1x_coco_20200130-7a93545f.pth')))
+                      #checkpoint='torchvision://resnet101')))
