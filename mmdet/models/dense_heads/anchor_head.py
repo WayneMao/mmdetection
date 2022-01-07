@@ -160,8 +160,8 @@ class AnchorHead(BaseDenseHead, BBoxTestMixin):
         # since feature map sizes of all images are the same, we only compute
         # anchors for one time
         multi_level_anchors = self.anchor_generator.grid_anchors(
-            featmap_sizes, device)
-        anchor_list = [multi_level_anchors for _ in range(num_imgs)]
+            featmap_sizes, device)  # 5[h*w*9, 4]
+        anchor_list = [multi_level_anchors for _ in range(num_imgs)]  # 2[5[h*w*9, 4]]
 
         # for each image, we compute valid flags of multi level anchors
         valid_flag_list = []
@@ -224,9 +224,11 @@ class AnchorHead(BaseDenseHead, BBoxTestMixin):
         sampling_result = self.sampler.sample(assign_result, anchors,
                                               gt_bboxes)
 
-        num_valid_anchors = anchors.shape[0]
+        num_valid_anchors = anchors.shape[0]  # [182403, 4]<-20267*9
         bbox_targets = torch.zeros_like(anchors)
         bbox_weights = torch.zeros_like(anchors)
+        # import pdb
+        # pdb.set_trace()
         labels = anchors.new_full((num_valid_anchors, ),
                                   self.num_classes,
                                   dtype=torch.long)
@@ -261,7 +263,7 @@ class AnchorHead(BaseDenseHead, BBoxTestMixin):
             num_total_anchors = flat_anchors.size(0)
             labels = unmap(
                 labels, num_total_anchors, inside_flags,
-                fill=self.num_classes)  # fill bg label
+                fill=self.num_classes)  # fill bg label 20267*9
             label_weights = unmap(label_weights, num_total_anchors,
                                   inside_flags)
             bbox_targets = unmap(bbox_targets, num_total_anchors, inside_flags)
@@ -328,7 +330,7 @@ class AnchorHead(BaseDenseHead, BBoxTestMixin):
         concat_valid_flag_list = []
         for i in range(num_imgs):
             assert len(anchor_list[i]) == len(valid_flag_list[i])
-            concat_anchor_list.append(torch.cat(anchor_list[i]))
+            concat_anchor_list.append(torch.cat(anchor_list[i]))  # list[tensor] 2[num_anchor, 4]
             concat_valid_flag_list.append(torch.cat(valid_flag_list[i]))
 
         # compute targets for each image
@@ -415,6 +417,11 @@ class AnchorHead(BaseDenseHead, BBoxTestMixin):
             # decodes the already encoded coordinates to absolute format.
             anchors = anchors.reshape(-1, 4)
             bbox_pred = self.bbox_coder.decode(anchors, bbox_pred)
+            # import pdb
+            # pdb.set_trace()
+            # print('*' * 40)
+            # print(f'bbox_pred: {bbox_pred.shape}')
+            # print(f'bbox_targets: {bbox_targets.shape}')
         loss_bbox = self.loss_bbox(
             bbox_pred,
             bbox_targets,
@@ -429,7 +436,8 @@ class AnchorHead(BaseDenseHead, BBoxTestMixin):
              gt_bboxes,
              gt_labels,
              img_metas,
-             gt_bboxes_ignore=None):
+             gt_bboxes_ignore=None,
+             teacher=False):
         """Compute losses of the head.
 
         Args:
@@ -454,7 +462,7 @@ class AnchorHead(BaseDenseHead, BBoxTestMixin):
         device = cls_scores[0].device
 
         anchor_list, valid_flag_list = self.get_anchors(
-            featmap_sizes, img_metas, device=device)
+            featmap_sizes, img_metas, device=device)  # 2[5[h*w*9, 4]]
         label_channels = self.cls_out_channels if self.use_sigmoid_cls else 1
         cls_reg_targets = self.get_targets(
             anchor_list,
@@ -472,14 +480,13 @@ class AnchorHead(BaseDenseHead, BBoxTestMixin):
             num_total_pos + num_total_neg if self.sampling else num_total_pos)
 
         # anchor number of multi levels
-        num_level_anchors = [anchors.size(0) for anchors in anchor_list[0]]
+        num_level_anchors = [anchors.size(0) for anchors in anchor_list[0]] # num_anchor/level [136800, 34200, 8550, 2223, 630]
         # concat all level anchors and flags to a single tensor
         concat_anchor_list = []
         for i in range(len(anchor_list)):
-            concat_anchor_list.append(torch.cat(anchor_list[i]))
+            concat_anchor_list.append(torch.cat(anchor_list[i]))  # 2[h'*w'*9, 4]
         all_anchor_list = images_to_levels(concat_anchor_list,
-                                           num_level_anchors)
-
+                                           num_level_anchors)  # 5[2, num', 4]
         losses_cls, losses_bbox = multi_apply(
             self.loss_single,
             cls_scores,
@@ -490,6 +497,8 @@ class AnchorHead(BaseDenseHead, BBoxTestMixin):
             bbox_targets_list,
             bbox_weights_list,
             num_total_samples=num_total_samples)
+        if teacher:
+            return dict(loss_cls=losses_cls, loss_bbox=losses_bbox), cls_reg_targets   
         return dict(loss_cls=losses_cls, loss_bbox=losses_bbox)
 
     @force_fp32(apply_to=('cls_scores', 'bbox_preds'))
